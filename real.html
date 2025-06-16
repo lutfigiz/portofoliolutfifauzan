@@ -242,6 +242,29 @@
             right: 10px;
         }
 
+        .music-prev-btn,
+.music-next-btn,
+.music-play-btn {
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    margin: 0 4px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    width: 36px;
+    opacity: 0.85;
+    transition: opacity 0.2s, transform 0.2s;
+}
+.music-prev-btn:hover,
+.music-next-btn:hover,
+.music-play-btn:hover {
+    opacity: 1;
+    transform: scale(1.13);
+}
         .gallery {
             display: flex;
             flex-wrap: wrap;
@@ -617,12 +640,13 @@
             border: none;
             outline: none;
             cursor: pointer;
-            margin-right: 18px; /* Increased from 10px */
+            margin: 0 4px;
             padding: 0;
             display: flex;
             align-items: center;
-            height: 32px;
-            width: 32px;
+            justify-content: center;
+            height: 36px;
+            width: 36px;
         }
 
         .music-title-wrap {
@@ -656,7 +680,72 @@
             display: block;
         }
 
-        @media (max-width: 900px) {
+        /* Centered typewriter text in slideshow */
+.slideshow-typewriter-wrap {
+    position: absolute;
+    top: 50%; /* Center vertically */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    width: 100%;
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+}
+#slideshow-typewriter {
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 2.2em;
+    color: #fff;
+    letter-spacing: 1.5px;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.85), 0 1px 0 #222, 0 0px 12px #000;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: unset !important;
+    background-clip: unset !important;
+    outline: none !important;
+    min-height: 1.2em;
+    display: inline-block;
+}
+/* Make the arrow button bigger */
+.scroll-down-btn svg {
+    width: 54px;
+    height: 54px;
+}
+.scroll-down-btn {
+    position: absolute;
+    left: 50%;
+    bottom: 38px;
+    top: unset;
+    transform: translateX(-50%);
+    z-index: 21;
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    animation: bounceDown 1.6s infinite;
+    transition: transform 0.2s;
+    padding: 0;
+    margin: 0;
+    opacity: 0.92;
+}
+.scroll-down-btn:hover {
+    transform: translateX(-50%) scale(1.12);
+    opacity: 1;
+}
+@keyframes bounceDown {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(18px); }
+}
+
+/* Responsive for arrow and typewriter */
+@media (max-width: 600px) {
+    .slideshow-typewriter-wrap { top: 32%; }
+    #slideshow-typewriter { font-size: 1.1em; }
+    .scroll-down-btn svg { width: 28px; height: 28px; }
+    .scroll-down-btn { bottom: 18px; }
+}
+
+@media (max-width: 900px) {
     .gallery-item { flex: 1 1 48%; }
     .slideshow-container { height: 60vw; min-height: 220px; }
     .music-player {
@@ -748,6 +837,13 @@
         <a href="real.html" class="lf-logo" title="Go to Home">LF</a>
         <!-- Music Player INSIDE header -->
         <div class="music-player" id="musicPlayer">
+            <button class="music-prev-btn" id="musicPrevBtn" aria-label="Previous">
+                <!-- Prev SVG -->
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <circle cx="11" cy="11" r="10" stroke="#00f0ff" stroke-width="2"/>
+                    <polygon points="13,7 8,11 13,15" fill="#00f0ff"/>
+                </svg>
+            </button>
             <button class="music-play-btn" id="musicPlayBtn" aria-label="Play/Pause">
                 <!-- Play SVG icon -->
                 <svg id="musicPlayIcon" width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -761,12 +857,19 @@
                     <rect x="15" y="9" width="3" height="10" fill="#00f0ff"/>
                 </svg>
             </button>
+            <button class="music-next-btn" id="musicNextBtn" aria-label="Next">
+                <!-- Next SVG -->
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <circle cx="11" cy="11" r="10" stroke="#00f0ff" stroke-width="2"/>
+                    <polygon points="9,7 14,11 9,15" fill="#00f0ff"/>
+                </svg>
+            </button>
             <div class="music-title-wrap">
                 <span class="music-title" id="musicTitle">Come Alive - San Z, Hoyo-MiX</span>
             </div>
-            <audio id="musicAudio" src="https://www.dropbox.com/scl/fi/l4dy4hlixmsnnvigl6bhu/Come-Alive.mp3?rlkey=o2kvsecei1so2fhimj0wscr15&st=r0tda8i9&raw=1"></audio>
+            <audio id="musicAudio"></audio>
         </div>
-        <h1><a href="#">Portofolio</a></h1>
+        <h1><a href="realestest.html">Portofolio</a></h1>
         <p id="typewriter"></p>
         <nav class="top-nav">
             <a href="#about-me">About Me</a>
@@ -777,6 +880,17 @@
 
     <!-- Slideshow -->
     <div class="slideshow-container">
+        <!-- Typewriter Welcome Text -->
+        <div class="slideshow-typewriter-wrap">
+            <span id="slideshow-typewriter"></span>
+        </div>
+        <!-- Animated Scroll Down Arrow -->
+        <button class="scroll-down-btn" id="scrollDownBtn" aria-label="Scroll to Gallery">
+            <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
+                <circle cx="27" cy="27" r="24" stroke="#00f0ff" stroke-width="2" fill="rgba(0,0,0,0.25)"/>
+                <polyline points="19,25 27,36 35,25" fill="none" stroke="#00f0ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
         <div class="slides active">
             <div class="slide-bg">
                 <img src="https://i.postimg.cc/QNq2BMYS/1750089393889.jpg" alt="" />
@@ -1083,12 +1197,16 @@ const MUSIC_KEY = 'music-player-state';
 function saveMusicState() {
     localStorage.setItem(MUSIC_KEY, JSON.stringify({
         currentTime: musicAudio.currentTime,
-        paused: musicAudio.paused
+        paused: musicAudio.paused,
+        currentTrack
     }));
 }
 
 function loadMusicState() {
     const state = JSON.parse(localStorage.getItem(MUSIC_KEY) || '{}');
+    if (typeof state.currentTrack === 'number' && state.currentTrack !== currentTrack) {
+        setTrack(state.currentTrack);
+    }
     if (typeof state.currentTime === 'number') {
         musicAudio.currentTime = state.currentTime;
     }
@@ -1105,6 +1223,9 @@ musicAudio.addEventListener('pause', saveMusicState);
 window.addEventListener('storage', (e) => {
     if (e.key === MUSIC_KEY) {
         const state = JSON.parse(e.newValue || '{}');
+        if (typeof state.currentTrack === 'number' && state.currentTrack !== currentTrack) {
+            setTrack(state.currentTrack);
+        }
         if (typeof state.currentTime === 'number' && Math.abs(musicAudio.currentTime - state.currentTime) > 1) {
             musicAudio.currentTime = state.currentTime;
         }
@@ -1157,6 +1278,84 @@ window.addEventListener('storage', (e) => {
 setInterval(() => {
     changeSlide(1);
 }, 5000);
+
+        // Typewriter for slideshow welcome text
+(function() {
+    const text = "Welcome to My Life Works";
+    const elem = document.getElementById("slideshow-typewriter");
+    let idx = 0, dir = 1;
+    function loop() {
+        if (dir === 1) {
+            idx++;
+            if (idx > text.length) {
+                dir = -1;
+                setTimeout(loop, 1200);
+                return;
+            }
+        } else {
+            idx--;
+            if (idx < 0) {
+                dir = 1;
+                setTimeout(loop, 700);
+                return;
+            }
+        }
+        elem.textContent = text.slice(0, idx);
+        setTimeout(loop, dir === 1 ? 90 : 45);
+    }
+    if (elem) loop();
+})();
+
+// Scroll down button logic
+document.getElementById('scrollDownBtn').onclick = function() {
+    const galleryTitle = document.querySelector('.gallery-title');
+    if (galleryTitle) {
+        galleryTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+// --- Playlist logic ---
+const playlist = [
+    {
+        src: "https://www.dropbox.com/scl/fi/l4dy4hlixmsnnvigl6bhu/Come-Alive.mp3?rlkey=o2kvsecei1so2fhimj0wscr15&st=r0tda8i9&raw=1",
+        title: "Come Alive - San Z, Hoyo-MiX"
+    },
+    {
+        src: "https://www.dropbox.com/scl/fi/rlzlh2jxjgwr8frpq5ni8/Blazing-Heart-English-Version.mp3?rlkey=i67b8dba2w1ynvo0fn86bggdu&st=z7ngr0lu&raw=1",
+        title: "Blazing Heart - Chrissy Contanza, Hoyo-MiX"
+    }
+    // Add more songs here as needed
+];
+let currentTrack = 0;
+
+function setTrack(idx) {
+    currentTrack = idx % playlist.length;
+    musicAudio.src = playlist[currentTrack].src;
+    if (musicTitle) musicTitle.textContent = playlist[currentTrack].title;
+    // Save state for cross-tab sync
+    saveMusicState();
+}
+
+function nextTrack() {
+    setTrack((currentTrack + 1) % playlist.length);
+    musicAudio.currentTime = 0;
+    musicAudio.play().catch(()=>{});
+}
+
+// On audio end, go to next track and loop
+musicAudio.addEventListener('ended', nextTrack);
+
+// On page load, set the first track
+setTrack(0);
+
+document.getElementById('musicPrevBtn').onclick = function() {
+    setTrack((currentTrack - 1 + playlist.length) % playlist.length);
+    musicAudio.currentTime = 0;
+    musicAudio.play().catch(()=>{});
+};
+document.getElementById('musicNextBtn').onclick = function() {
+    nextTrack();
+};
     </script>
 </body>
 </html>
