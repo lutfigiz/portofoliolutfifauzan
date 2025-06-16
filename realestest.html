@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dino Game</title>
+  <style>
+    body {
+      background: #f7f7f7;
+      font-family: 'Poppins', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      justify-content: center;
+    }
+    #gameContainer {
+      background: #fff;
+      border: 2px solid #222;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      margin-top: 40px;
+      position: relative;
+      width: 640px;
+      height: 200px;
+      overflow: hidden;
+    }
+    #score {
+      font-size: 1.2em;
+      margin-top: 16px;
+      color: #333;
+      letter-spacing: 2px;
+    }
+    #health {
+      font-size:1.2em;
+      margin-top:8px;
+      color:#b00;
+      letter-spacing:2px;
+    }
+    @media (max-width: 700px) {
+      #gameContainer { width: 98vw; }
+      #score, #health, h2 { font-size: 1.1em; }
+      #mobileJumpBtn {
+        display: block;
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        font-size: 1.3em;
+        padding: 18px 48px;
+        background: #00f0ff;
+        color: #222;
+        border: none;
+        border-radius: 32px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+        opacity: 0.92;
+      }
+    }
+    #bgVideo, #bgVideo2 {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -1;
+      display: block;
+      background: #000;
+    }
+    #mobileJumpBtn {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Background video elements -->
+  <video
+    id="bgVideo"
+    src="https://www.dropbox.com/scl/fi/j9i3qavvwnfikv453hlwe/pop-mie-enak.mp4?rlkey=yo85hcgx5x31k1mms1yy0yp4f&st=ogsoo8kd&raw=1"
+    loop
+    autoplay
+    playsinline
+    controls
+    style="display:block"
+  ></video>
+  <video
+    id="bgVideo2"
+    src="https://www.dropbox.com/scl/fi/spx7fr97zklaepcg7z3dl/ambatukam-original.mp4?rlkey=08z6561ph6u70ypp2rihs39b7&st=2dvewpra&raw=1"
+    loop
+    playsinline
+    style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -2;
+      display: none;
+      background: #000;
+    "
+  ></video>
+
+  <h2>Dino Game (Press Space or Tap to Jump)</h2>
+  <div id="gameContainer"></div>
+  <div id="score">Score: 0</div>
+  <div id="health">Health: 10</div>
+  <button id="mobileJumpBtn">Jump</button>
+  <script>
+    // Game constants
+    const GAME_W = 640, GAME_H = 200, GROUND_Y = 160;
+    const DINO_W = 40, DINO_H = 40, DINO_X = 50;
+    const GRAVITY = 0.38;
+    const JUMP_V = -13; // Higher jump
+    const OBSTACLE_W = 18, OBSTACLE_H_MIN = 32, OBSTACLE_H_MAX = 60, OBSTACLE_GAP_MIN = 320, OBSTACLE_GAP_MAX = 480;
+    const TERRAIN_H = 20, TERRAIN_COLOR = "#bbb";
+    const OBSTACLE_COLOR = "#444";
+
+    // Setup
+    const container = document.getElementById('gameContainer');
+    const canvas = document.createElement('canvas');
+    canvas.width = GAME_W;
+    canvas.height = GAME_H;
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    let scoreElem = document.getElementById('score');
+    let healthElem = document.getElementById('health');
+    const bgVideo = document.getElementById('bgVideo');
+    const bgVideo2 = document.getElementById('bgVideo2');
+    let video2Active = false;
+
+    // Dino state
+    let dinoY = GROUND_Y - DINO_H, dinoV = 0, isJumping = false, isAlive = true;
+    let dinoAngle = 0, spinning = false;
+    // Obstacles
+    let obstacles = [];
+    // Score & Health
+    let score = 0, highScore = 0, health = 10;
+
+    // Dino image setup (use your provided image)
+    const dinoImg = new Image();
+    let dinoImgLoaded = false;
+    dinoImg.onload = () => { dinoImgLoaded = true; };
+    dinoImg.src = "https://i.postimg.cc/sfLSBbX0/show.png";
+
+    // Mini boss state
+    let miniBossActive = false;
+    let miniBossX = 0, miniBossY = 0;
+    let miniBossW = 80, miniBossH = 120;
+    let miniBossVX = 0, miniBossVY = 0;
+
+    // Video state
+    let videoActive = false;
+
+    // Special music for score 3000+
+    const specialMusic = new Audio("https://www.dropbox.com/scl/fi/qpdcnqlzl4m3azhlg4grf/dreamybullxxx-ambatakam-trap-remix.mp3?rlkey=7f7k0ajhnhyofmrgglkrcjair&st=5k0ppgtw&raw=1");
+    specialMusic.loop = true;
+    let specialMusicPlayed = false;
+
+    function resetGame() {
+      dinoY = GROUND_Y - DINO_H;
+      dinoV = 0;
+      isJumping = false;
+      isAlive = true;
+      dinoAngle = 0;
+      spinning = false;
+      obstacles = [];
+      score = 0;
+      health = 10;
+      scoreElem.textContent = "Score: 0";
+      healthElem.textContent = "Health: " + health;
+      miniBossActive = false;
+      // Hide and pause video
+      bgVideo.pause();
+      bgVideo.currentTime = 0;
+      bgVideo.style.display = "none";
+      videoActive = false;
+
+      bgVideo2.pause();
+      bgVideo2.currentTime = 0;
+      bgVideo2.style.display = "none";
+      video2Active = false;
+    }
+
+    function drawDino() {
+      ctx.save();
+      ctx.translate(DINO_X + DINO_W / 2, dinoY + DINO_H / 2);
+      ctx.rotate(dinoAngle);
+      if (dinoImgLoaded) {
+        ctx.drawImage(dinoImg, -DINO_W / 2, -DINO_H / 2, DINO_W, DINO_H);
+      } else {
+        ctx.fillStyle = "#888";
+        ctx.fillRect(-DINO_W / 2, -DINO_H / 2, DINO_W, DINO_H);
+      }
+      ctx.restore();
+    }
+
+    function drawGround() {
+      ctx.fillStyle = TERRAIN_COLOR;
+      ctx.fillRect(0, GROUND_Y, GAME_W, TERRAIN_H);
+    }
+
+    function drawObstacles() {
+      ctx.fillStyle = OBSTACLE_COLOR;
+      for (let obs of obstacles) {
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      }
+    }
+
+    function updateObstacles() {
+      for (let obs of obstacles) {
+        obs.x -= 2; // slower for easier game
+      }
+      obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
+      if (
+        obstacles.length === 0 ||
+        obstacles[obstacles.length - 1].x < GAME_W - Math.random() * (OBSTACLE_GAP_MAX - OBSTACLE_GAP_MIN) - OBSTACLE_GAP_MIN
+      ) {
+        let h = OBSTACLE_H_MIN + Math.random() * (OBSTACLE_H_MAX - OBSTACLE_H_MIN);
+        obstacles.push({
+          x: GAME_W,
+          y: GROUND_Y - h,
+          w: OBSTACLE_W,
+          h: h,
+        });
+      }
+    }
+
+    function checkObstacleCollision() {
+      for (let obs of obstacles) {
+        if (
+          DINO_X + DINO_W - 8 > obs.x &&
+          DINO_X + 8 < obs.x + obs.w &&
+          dinoY + DINO_H - 4 > obs.y
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function updateScore() {
+      score++;
+      scoreElem.textContent = "Score: " + score;
+
+      // Mini boss appears at 1575, disappears at 2750
+      if (score >= 1575 && score < 2750 && !miniBossActive) {
+        activateMiniBoss();
+      }
+      if (score >= 2750 && miniBossActive) {
+        miniBossActive = false;
+      }
+
+      // Video 1 appears at 1575, disappears at 2750
+      if (score >= 1575 && score < 2750 && !videoActive) {
+        bgVideo.style.display = "block";
+        bgVideo.currentTime = 0;
+        bgVideo.play().catch(()=>{});
+        videoActive = true;
+      }
+      if ((score < 1575 || score >= 2750) && videoActive) {
+        bgVideo.pause();
+        bgVideo.currentTime = 0;
+        bgVideo.style.display = "none";
+        videoActive = false;
+      }
+
+      // Video 2 appears at 3000, disappears at 5000
+      if (score >= 3000 && score < 5000 && !video2Active) {
+        bgVideo2.style.display = "block";
+        bgVideo2.currentTime = 0;
+        bgVideo2.play().catch(()=>{});
+        video2Active = true;
+      }
+      if ((score < 3000 || score >= 5000) && video2Active) {
+        bgVideo2.pause();
+        bgVideo2.currentTime = 0;
+        bgVideo2.style.display = "none";
+        video2Active = false;
+      }
+
+      // Special music at 3000
+      if (score >= 3000 && !specialMusicPlayed) {
+        specialMusic.currentTime = 0;
+        specialMusic.play().catch(()=>{});
+        specialMusicPlayed = true;
+      }
+      if (score < 3000 && specialMusicPlayed) {
+        specialMusic.pause();
+        specialMusic.currentTime = 0;
+        specialMusicPlayed = false;
+      }
+
+      // End game and redirect at score 6969
+      if (score >= 6969) {
+        isAlive = false;
+        setTimeout(() => {
+          window.location.href = "https://web.facebook.com/groups/1059553025495019";
+        }, 500); // short delay for user feedback
+      }
+    }
+
+    function activateMiniBoss() {
+      miniBossActive = true;
+      // Start just outside left or right edge
+      const fromLeft = Math.random() < 0.5;
+      if (fromLeft) {
+        miniBossX = -miniBossW - 10;
+        miniBossVX = 0.4 + Math.random() * 0.2;
+      } else {
+        miniBossX = GAME_W + 10;
+        miniBossVX = -(0.4 + Math.random() * 0.2);
+      }
+      miniBossY = 10;
+      miniBossVY = 0;
+    }
+
+    function updateMiniBoss() {
+      if (!miniBossActive) return;
+      // Gravity (slow)
+      miniBossVY += 0.08;
+      miniBossY += miniBossVY;
+      miniBossX += miniBossVX;
+
+      // Bounce on ground
+      if (miniBossY + miniBossH > GROUND_Y) {
+        miniBossY = GROUND_Y - miniBossH;
+        miniBossVY = -2.2 - Math.random() * 0.7;
+        // Randomly change horizontal direction, but keep it slow
+        if (Math.random() < 0.3) {
+          miniBossVX = (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.2);
+        }
+      }
+
+      // Bounce on walls
+      if (miniBossX < -miniBossW) {
+        miniBossX = -miniBossW;
+        miniBossVX = Math.abs(miniBossVX);
+      }
+      if (miniBossX + miniBossW > GAME_W + miniBossW) {
+        miniBossX = GAME_W + miniBossW - miniBossW;
+        miniBossVX = -Math.abs(miniBossVX);
+      }
+    }
+
+    function drawMiniBoss() {
+      if (!miniBossActive) return;
+      ctx.save();
+      ctx.fillStyle = "#e74c3c";
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.rect(miniBossX, miniBossY, miniBossW, miniBossH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, GAME_W, GAME_H);
+      drawGround();
+      drawObstacles();
+      drawDino();
+      drawMiniBoss();
+
+      if (!isAlive) {
+        ctx.font = "bold 32px Poppins, Arial, sans-serif";
+        ctx.fillStyle = "#e74c3c";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over!", GAME_W/2, GAME_H/2 - 18);
+        ctx.font = "18px Poppins, Arial, sans-serif";
+        ctx.fillStyle = "#333";
+        ctx.fillText("Press Space or Tap to Restart", GAME_W/2, GAME_H/2 + 18);
+        return;
+      }
+
+      // Dino physics
+      dinoY += dinoV;
+      dinoV += GRAVITY;
+
+      // Spin logic: spin while in the air
+      if (dinoY < GROUND_Y - DINO_H) {
+        spinning = true;
+        dinoAngle += 0.18;
+      } else {
+        if (spinning) {
+          dinoAngle = 0;
+          spinning = false;
+        }
+      }
+
+      if (dinoY >= GROUND_Y - DINO_H) {
+        dinoY = GROUND_Y - DINO_H;
+        dinoV = 0;
+        isJumping = false;
+      }
+
+      updateObstacles();
+
+      // Mini boss logic and collision
+      if (miniBossActive) {
+        updateMiniBoss();
+        // Collision with dino
+        if (
+          DINO_X + DINO_W > miniBossX &&
+          DINO_X < miniBossX + miniBossW &&
+          dinoY + DINO_H > miniBossY &&
+          dinoY < miniBossY + miniBossH
+        ) {
+          health--;
+          healthElem.textContent = "Health: " + health;
+          dinoY -= 10;
+          dinoV = JUMP_V / 2;
+          if (health <= 0) {
+            isAlive = false;
+            highScore = Math.max(highScore, score);
+            scoreElem.textContent = `Score: ${score} | High: ${highScore}`;
+            // Hide and pause video
+            bgVideo.pause();
+            bgVideo.currentTime = 0;
+            bgVideo.style.display = "none";
+            videoActive = false;
+
+            bgVideo2.pause();
+            bgVideo2.currentTime = 0;
+            bgVideo2.style.display = "none";
+            video2Active = false;
+            return;
+          }
+        }
+      }
+
+      // Obstacle collision reduces health by 1
+      if (checkObstacleCollision()) {
+        health--;
+        healthElem.textContent = "Health: " + health;
+        dinoY -= 10;
+        dinoV = JUMP_V / 2;
+        // Remove the obstacle that was hit (so you don't lose all health at once)
+        obstacles = obstacles.filter(obs =>
+          !(DINO_X + DINO_W - 8 > obs.x &&
+            DINO_X + 8 < obs.x + obs.w &&
+            dinoY + DINO_H - 4 > obs.y)
+        );
+        if (health <= 0) {
+          isAlive = false;
+          highScore = Math.max(highScore, score);
+          scoreElem.textContent = `Score: ${score} | High: ${highScore}`;
+          // Hide and pause video
+          bgVideo.pause();
+          bgVideo.currentTime = 0;
+          bgVideo.style.display = "none";
+          videoActive = false;
+
+          bgVideo2.pause();
+          bgVideo2.currentTime = 0;
+          bgVideo2.style.display = "none";
+          video2Active = false;
+          return;
+        }
+      }
+
+      updateScore();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function jump() {
+      if (!isAlive) {
+        resetGame();
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+      if (!isJumping && dinoY >= GROUND_Y - DINO_H) {
+        dinoV = JUMP_V;
+        isJumping = true;
+      }
+    }
+
+    // Mobile jump button support
+    const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+    function showMobileJumpBtn() {
+      if (window.innerWidth < 800) {
+        mobileJumpBtn.style.display = 'block';
+      } else {
+        mobileJumpBtn.style.display = 'none';
+      }
+    }
+    window.addEventListener('resize', showMobileJumpBtn);
+    showMobileJumpBtn();
+    mobileJumpBtn.addEventListener('touchstart', function(e) {
+      jump();
+      e.preventDefault();
+    });
+
+    // Controls
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.key === ' ') {
+        jump();
+        e.preventDefault();
+      }
+    });
+    canvas.addEventListener('pointerdown', jump);
+    document.getElementById('mobileJumpBtn').addEventListener('click', jump);
+    canvas.addEventListener('touchstart', function(e) {
+      jump();
+      e.preventDefault();
+    });
+
+    // Start game
+    resetGame();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
