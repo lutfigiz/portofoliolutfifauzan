@@ -425,6 +425,29 @@
             }
         }
         /* Music Player Styles */
+        .music-prev-btn,
+        .music-next-btn,
+        .music-play-btn {
+            background: none;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            margin: 0 4px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 36px;
+            width: 36px;
+            opacity: 0.85;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .music-prev-btn:hover,
+        .music-next-btn:hover,
+        .music-play-btn:hover {
+            opacity: 1;
+            transform: scale(1.13);
+        }
         .music-player {
             position: absolute;
             top: 50%;
@@ -441,18 +464,6 @@
             max-width: 320px;
             height: 40px;
             overflow: hidden;
-        }
-        .music-play-btn {
-            background: none;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            margin-right: 18px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            height: 32px;
-            width: 32px;
         }
         .music-title-wrap {
             overflow: hidden;
@@ -494,11 +505,18 @@
         <nav class="top-nav">
             <a href="real.html#about-me">About Me</a>
             <a href="#gallery">Gallery</a>
-            <a href="https://www.linkedin.com/in/lutfi-fauzan-8416822a7/">Profile</a>
+            <a href="profile.html">Profile</a>
         </nav>
 
         <!-- Music Player INSIDE header -->
         <div class="music-player" id="musicPlayer">
+            <button class="music-prev-btn" id="musicPrevBtn" aria-label="Previous">
+                <!-- Prev SVG -->
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <circle cx="11" cy="11" r="10" stroke="#00f0ff" stroke-width="2"/>
+                    <polygon points="13,7 8,11 13,15" fill="#00f0ff"/>
+                </svg>
+            </button>
             <button class="music-play-btn" id="musicPlayBtn" aria-label="Play/Pause">
                 <!-- Play SVG icon -->
                 <svg id="musicPlayIcon" width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -512,10 +530,17 @@
                     <rect x="15" y="9" width="3" height="10" fill="#00f0ff"/>
                 </svg>
             </button>
+            <button class="music-next-btn" id="musicNextBtn" aria-label="Next">
+                <!-- Next SVG -->
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <circle cx="11" cy="11" r="10" stroke="#00f0ff" stroke-width="2"/>
+                    <polygon points="9,7 14,11 9,15" fill="#00f0ff"/>
+                </svg>
+            </button>
             <div class="music-title-wrap">
                 <span class="music-title" id="musicTitle">Come Alive - San Z, Hoyo-MiX</span>
             </div>
-            <audio id="musicAudio" src="https://www.dropbox.com/scl/fi/l4dy4hlixmsnnvigl6bhu/Come-Alive.mp3?rlkey=o2kvsecei1so2fhimj0wscr15&st=r0tda8i9&raw=1"></audio>
+            <audio id="musicAudio"></audio>
         </div>
     </header>
 
@@ -673,27 +698,54 @@
         );
         if (tiktokSection) tiktokObserver.observe(tiktokSection);
 
-        // Music player logic
+        // --- Playlist logic ---
+        const playlist = [
+            {
+                src: "https://www.dropbox.com/scl/fi/l4dy4hlixmsnnvigl6bhu/Come-Alive.mp3?rlkey=o2kvsecei1so2fhimj0wscr15&st=r0tda8i9&raw=1",
+                title: "Come Alive - San Z, Hoyo-MiX"
+            },
+            {
+                src: "https://www.dropbox.com/scl/fi/rlzlh2jxjgwr8frpq5ni8/Blazing-Heart-English-Version.mp3?rlkey=i67b8dba2w1ynvo0fn86bggdu&st=z7ngr0lu&raw=1",
+                title: "Blazing Heart - Chrissy Contanza, Hoyo-MiX"
+            }
+            // Add more songs here as needed
+        ];
+        let currentTrack = 0;
+
         const musicPlayer = document.getElementById('musicPlayer');
-        const musicPlayBtn = document.getElementById('musicPlayBtn');
         const musicAudio = document.getElementById('musicAudio');
-        const musicTitle = document.getElementById('musicTitle');
+        const musicPlayBtn = document.getElementById('musicPlayBtn');
         const musicPlayIcon = document.getElementById('musicPlayIcon');
         const musicPauseIcon = document.getElementById('musicPauseIcon');
-        let isPlaying = false;
-
-        // --- Cross-tab sync using localStorage ---
+        const musicTitle = document.getElementById('musicTitle');
         const MUSIC_KEY = 'music-player-state';
+
+        function setTrack(idx) {
+            currentTrack = idx % playlist.length;
+            musicAudio.src = playlist[currentTrack].src;
+            if (musicTitle) musicTitle.textContent = playlist[currentTrack].title;
+            saveMusicState();
+        }
+
+        function nextTrack() {
+            setTrack((currentTrack + 1) % playlist.length);
+            musicAudio.currentTime = 0;
+            musicAudio.play().catch(()=>{});
+        }
 
         function saveMusicState() {
             localStorage.setItem(MUSIC_KEY, JSON.stringify({
                 currentTime: musicAudio.currentTime,
-                paused: musicAudio.paused
+                paused: musicAudio.paused,
+                currentTrack
             }));
         }
 
         function loadMusicState() {
             const state = JSON.parse(localStorage.getItem(MUSIC_KEY) || '{}');
+            if (typeof state.currentTrack === 'number' && state.currentTrack !== currentTrack) {
+                setTrack(state.currentTrack);
+            }
             if (typeof state.currentTime === 'number') {
                 musicAudio.currentTime = state.currentTime;
             }
@@ -706,10 +758,12 @@
         musicAudio.addEventListener('play', saveMusicState);
         musicAudio.addEventListener('pause', saveMusicState);
 
-        // Listen for changes from other tabs
         window.addEventListener('storage', (e) => {
             if (e.key === MUSIC_KEY) {
                 const state = JSON.parse(e.newValue || '{}');
+                if (typeof state.currentTrack === 'number' && state.currentTrack !== currentTrack) {
+                    setTrack(state.currentTrack);
+                }
                 if (typeof state.currentTime === 'number' && Math.abs(musicAudio.currentTime - state.currentTime) > 1) {
                     musicAudio.currentTime = state.currentTime;
                 }
@@ -722,7 +776,6 @@
             }
         });
 
-        // --- UI logic ---
         musicPlayBtn.onclick = function() {
             if (musicAudio.paused) {
                 musicAudio.play();
@@ -741,6 +794,20 @@
             musicPlayIcon.style.display = '';
             musicPauseIcon.style.display = 'none';
         });
+
+        document.getElementById('musicPrevBtn').onclick = function() {
+            setTrack((currentTrack - 1 + playlist.length) % playlist.length);
+            musicAudio.currentTime = 0;
+            musicAudio.play().catch(()=>{});
+        };
+        document.getElementById('musicNextBtn').onclick = function() {
+            nextTrack();
+        };
+
+        musicAudio.addEventListener('ended', nextTrack);
+
+        // On page load, set the first track
+        setTrack(0);
 
         // Try to autoplay music on page load and sync state
         window.addEventListener('DOMContentLoaded', function() {
